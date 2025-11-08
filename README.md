@@ -2,6 +2,12 @@
 
 iPhone用の高品質48MP RAW撮影ができるカメラアプリです。
 
+## 🚀 クイックスタート
+
+**すぐに使いたい方はこちら**: [QUICKSTART.md](QUICKSTART.md) - 5分でiPhoneにインストール
+
+詳しいインストール手順: [INSTALL.md](INSTALL.md)
+
 ## 主な機能
 
 - **48MP撮影**: iPhone 14 Pro以降の最大解像度で撮影

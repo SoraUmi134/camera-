@@ -11,6 +11,7 @@
 		A1000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000004 /* ContentView.swift */; };
 		A1000005 /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000006 /* CameraManager.swift */; };
 		A1000007 /* CameraPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008 /* CameraPreview.swift */; };
+		A1000019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000020 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -20,6 +21,7 @@
 		A1000008 /* CameraPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreview.swift; sourceTree = "<group>"; };
 		A1000009 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A100000A /* SilentRawCamera.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SilentRawCamera.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000020 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,6 +43,7 @@
 				A1000004 /* ContentView.swift */,
 				A1000006 /* CameraManager.swift */,
 				A1000008 /* CameraPreview.swift */,
+				A1000020 /* Assets.xcassets */,
 			);
 			path = SilentRawCamera;
 			sourceTree = "<group>";
@@ -119,6 +122,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1000019 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
