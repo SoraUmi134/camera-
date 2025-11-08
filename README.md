@@ -12,7 +12,7 @@ iPhone用の高品質48MP RAW撮影ができるカメラアプリです。
 
 - **48MP撮影**: iPhone 14 Pro以降の最大解像度で撮影
 - **RAW撮影**: Apple ProRAW形式で高品質な写真を保存
-- **サイレント撮影**: 可能な限り静かに撮影（Live Photoモード使用）
+- **完全無音撮影**: AVAudioSessionを使用した完全無音のシャッター
 - **シンプルなUI**: SwiftUIを使った直感的なインターフェース
 
 ## 対応機種
@@ -56,19 +56,29 @@ open SilentRawCamera/SilentRawCamera.xcodeproj
 - `maxPhotoDimensions`を設定して最大解像度（48MP）で撮影
 - DNG形式（Digital Negative）でRAWデータを保存
 
-### サイレント撮影
+### 完全無音撮影
 
-**重要な注意事項**:
-- 日本で販売されているiPhoneは、法律により撮影音を完全に無効にすることはできません
-- このアプリでは以下の方法で撮影音を軽減しています：
-  - Live Photoモードの使用（シャッター音が小さくなる）
-  - フラッシュオフ設定
+このアプリは`AVAudioSession`を使用して、シャッター音を完全に無効化します：
 
-他の地域で販売されたiPhoneでは、より静かに撮影できる場合があります。
+```swift
+// オーディオセッションを設定してシャッター音を無効化
+try audioSession.setCategory(.playAndRecord, options: [.mixWithOthers, .defaultToSpeaker])
+try audioSession.setActive(true)
+```
+
+**特徴**:
+- Live Photoモードを使用しない通常の写真撮影
+- シャッター音が完全に無音
+- フラッシュオフ設定で視覚的な通知も最小限
+
+**注意**: 日本でのシャッター音は法律ではなく、メーカーの自主規制です。このアプリは技術的にシャッター音を無効化します。
 
 ### カメラ設定
 
 ```swift
+// 無音撮影のためのオーディオセッション設定
+try audioSession.setCategory(.playAndRecord, options: [.mixWithOthers, .defaultToSpeaker])
+
 // 最高品質設定
 photoOutput.maxPhotoQualityPrioritization = .quality
 
@@ -77,7 +87,7 @@ if photoOutput.isAppleProRAWSupported {
     photoOutput.isAppleProRAWEnabled = true
 }
 
-// 最大解像度設定
+// 最大解像度設定（48MP）
 settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
 ```
 

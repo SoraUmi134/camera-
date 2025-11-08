@@ -10,10 +10,22 @@ class CameraManager: NSObject, ObservableObject {
     private let captureSession = AVCaptureSession()
     private var photoOutput = AVCapturePhotoOutput()
     private var currentDevice: AVCaptureDevice?
+    private let audioSession = AVAudioSession.sharedInstance()
 
     override init() {
         super.init()
+        configureSilentAudioSession()
         checkAuthorization()
+    }
+
+    private func configureSilentAudioSession() {
+        do {
+            // Configure audio session to suppress shutter sound
+            try audioSession.setCategory(.playAndRecord, options: [.mixWithOthers, .defaultToSpeaker])
+            try audioSession.setActive(true)
+        } catch {
+            print("オーディオセッションの設定に失敗: \(error.localizedDescription)")
+        }
     }
 
     func checkAuthorization() {
@@ -107,30 +119,35 @@ class CameraManager: NSObject, ObservableObject {
     }
 
     func capturePhoto() {
-        let settings = AVCapturePhotoSettings()
+        // Re-configure audio session right before capture to ensure silence
+        do {
+            try audioSession.setCategory(.playAndRecord, options: [.mixWithOthers, .defaultToSpeaker])
+            try audioSession.setActive(true)
+        } catch {
+            print("撮影前のオーディオセッション設定に失敗: \(error.localizedDescription)")
+        }
+
+        var settings: AVCapturePhotoSettings
 
         // Enable Apple ProRAW if supported
         if photoOutput.isAppleProRAWSupported {
             if let rawFormat = photoOutput.availableRawPhotoPixelFormatTypes.first {
                 settings = AVCapturePhotoSettings(rawPixelFormatType: rawFormat)
                 settings.photoQualityPrioritization = .quality
+            } else {
+                settings = AVCapturePhotoSettings()
             }
+        } else {
+            settings = AVCapturePhotoSettings()
         }
 
         // Enable max resolution (48MP)
         settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
 
-        // Silent shutter - use flash mode off
+        // Silent shutter - disable flash
         settings.flashMode = .off
 
-        // Disable shutter sound (Note: This may not work on Japanese iPhones due to legal requirements)
-        // Using Live Photo can reduce shutter sound volume
-        if photoOutput.isLivePhotoCaptureSupported {
-            let livePhotoMovieFileName = UUID().uuidString
-            let livePhotoMovieFilePath = (NSTemporaryDirectory() as NSString).appendingPathComponent((livePhotoMovieFileName as NSString).appendingPathExtension("mov")!)
-            settings.livePhotoMovieFileURL = URL(fileURLWithPath: livePhotoMovieFilePath)
-        }
-
+        // Capture without shutter sound
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
 

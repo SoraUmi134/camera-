@@ -47,7 +47,7 @@ struct ContentView: View {
                             .foregroundColor(.white)
                             .cornerRadius(8)
 
-                        Text("サイレントモード")
+                        Text("🔇 完全無音")
                             .font(.caption)
                             .fontWeight(.bold)
                             .padding(8)
