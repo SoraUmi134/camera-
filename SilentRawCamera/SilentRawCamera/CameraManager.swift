@@ -99,22 +99,16 @@ class CameraManager: NSObject, ObservableObject {
     }
 
     private func getBestCameraDevice() -> AVCaptureDevice? {
-        // Try to get triple camera or wide-angle camera with 48MP support
-        // iPhone 14 Pro and later have 48MP main camera
+        // Get the best available back camera
+        // iPhone 14 Pro and later will support 48MP when we set maxPhotoDimensions
         let discoverySession = AVCaptureDevice.DiscoverySession(
             deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInWideAngleCamera],
             mediaType: .video,
             position: .back
         )
 
-        // Find device that supports high resolution (48MP)
-        for device in discoverySession.devices {
-            if device.activeFormat.isHighResolutionPhotoEnabled {
-                return device
-            }
-        }
-
-        // Fallback to any available back camera
+        // Return the first available back camera
+        // The 48MP capability is determined by maxPhotoDimensions setting during capture
         return discoverySession.devices.first
     }
 
