@@ -64,6 +64,17 @@ struct ContentView: View {
 
                 // Bottom bar - capture button
                 VStack(spacing: 20) {
+                    // Status messages
+                    if !cameraManager.isSessionReady && cameraManager.isAuthorized {
+                        Text("カメラ準備中...")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(Color.blue.opacity(0.8))
+                            .cornerRadius(10)
+                            .padding(.horizontal)
+                    }
+
                     // Error message
                     if let errorMessage = cameraManager.errorMessage {
                         Text(errorMessage)
@@ -81,14 +92,16 @@ struct ContentView: View {
                     }) {
                         ZStack {
                             Circle()
-                                .fill(Color.white)
+                                .fill(cameraManager.isSessionReady ? Color.white : Color.gray)
                                 .frame(width: 70, height: 70)
 
                             Circle()
-                                .stroke(Color.white, lineWidth: 3)
+                                .stroke(cameraManager.isSessionReady ? Color.white : Color.gray, lineWidth: 3)
                                 .frame(width: 85, height: 85)
                         }
                     }
+                    .disabled(!cameraManager.isSessionReady)
+                    .opacity(cameraManager.isSessionReady ? 1.0 : 0.5)
                     .padding(.bottom, 40)
                 }
             }

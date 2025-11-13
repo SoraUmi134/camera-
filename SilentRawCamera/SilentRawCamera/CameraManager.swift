@@ -6,6 +6,7 @@ class CameraManager: NSObject, ObservableObject {
     @Published var isAuthorized = false
     @Published var capturedImage: UIImage?
     @Published var errorMessage: String?
+    @Published var isSessionReady = false
 
     private let captureSession = AVCaptureSession()
     private var photoOutput = AVCapturePhotoOutput()
@@ -89,7 +90,14 @@ class CameraManager: NSObject, ObservableObject {
 
             // Start session on background thread
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-                self?.captureSession.startRunning()
+                guard let self = self else { return }
+                self.captureSession.startRunning()
+
+                // Wait a bit for session to stabilize, then mark as ready
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    self.isSessionReady = true
+                    print("カメラセッション準備完了")
+                }
             }
 
         } catch {
@@ -99,20 +107,58 @@ class CameraManager: NSObject, ObservableObject {
     }
 
     private func getBestCameraDevice() -> AVCaptureDevice? {
-        // Get the best available back camera
-        // iPhone 14 Pro and later will support 48MP when we set maxPhotoDimensions
+        // Try different camera types in order of preference
+        let deviceTypes: [AVCaptureDevice.DeviceType] = [
+            .builtInTripleCamera,
+            .builtInDualWideCamera,
+            .builtInDualCamera,
+            .builtInWideAngleCamera
+        ]
+
+        // Try each device type
+        for deviceType in deviceTypes {
+            if let device = AVCaptureDevice.default(deviceType, for: .video, position: .back) {
+                print("カメラデバイスを検出: \(deviceType.rawValue)")
+                return device
+            }
+        }
+
+        // Fallback: Use discovery session
         let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInTripleCamera, .builtInDualWideCamera, .builtInWideAngleCamera],
+            deviceTypes: [.builtInWideAngleCamera],
             mediaType: .video,
             position: .back
         )
 
-        // Return the first available back camera
-        // The 48MP capability is determined by maxPhotoDimensions setting during capture
-        return discoverySession.devices.first
+        if let device = discoverySession.devices.first {
+            print("ディスカバリーセッションでカメラを検出")
+            return device
+        }
+
+        // Last resort: any video device
+        print("エラー: カメラデバイスが見つかりません")
+        return AVCaptureDevice.default(for: .video)
     }
 
     func capturePhoto() {
+        // Check if session is ready
+        guard isSessionReady && captureSession.isRunning else {
+            print("カメラセッションがまだ準備できていません")
+            DispatchQueue.main.async {
+                self.errorMessage = "カメラが準備中です。少しお待ちください"
+            }
+            return
+        }
+
+        // Check if there's an active video connection
+        guard let connection = photoOutput.connection(with: .video), connection.isEnabled else {
+            print("ビデオ接続が有効ではありません")
+            DispatchQueue.main.async {
+                self.errorMessage = "カメラ接続エラー"
+            }
+            return
+        }
+
         // Re-configure audio session right before capture to ensure silence
         do {
             try audioSession.setCategory(.playAndRecord, options: [.mixWithOthers, .defaultToSpeaker])
@@ -141,6 +187,7 @@ class CameraManager: NSObject, ObservableObject {
         // Silent shutter - disable flash
         settings.flashMode = .off
 
+        print("撮影開始")
         // Capture without shutter sound
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
