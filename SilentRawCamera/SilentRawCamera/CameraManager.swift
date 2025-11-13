@@ -30,84 +30,148 @@ class CameraManager: NSObject, ObservableObject {
     }
 
     func checkAuthorization() {
-        switch AVCaptureDevice.authorizationStatus(for: .video) {
+        print("=== カメラ権限チェック ===")
+        let status = AVCaptureDevice.authorizationStatus(for: .video)
+        print("現在の権限ステータス: \(status.rawValue)")
+
+        switch status {
         case .authorized:
+            print("✅ カメラ権限が許可されています")
             isAuthorized = true
             setupCamera()
         case .notDetermined:
+            print("⚠️ カメラ権限が未決定、リクエスト中...")
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                print(granted ? "✅ カメラ権限が許可されました" : "❌ カメラ権限が拒否されました")
                 DispatchQueue.main.async {
                     self?.isAuthorized = granted
                     if granted {
                         self?.setupCamera()
+                    } else {
+                        self?.errorMessage = "カメラへのアクセスが拒否されました"
                     }
                 }
             }
-        default:
+        case .denied:
+            print("❌ カメラ権限が拒否されています")
+            isAuthorized = false
+            errorMessage = "カメラへのアクセスが拒否されています。設定から許可してください。"
+        case .restricted:
+            print("❌ カメラ権限が制限されています")
+            isAuthorized = false
+            errorMessage = "カメラへのアクセスが制限されています"
+        @unknown default:
+            print("❌ 不明な権限ステータス")
             isAuthorized = false
         }
     }
 
     private func setupCamera() {
+        print("=== カメラセットアップ開始 ===")
         captureSession.beginConfiguration()
 
         // Set session preset for high resolution
         if captureSession.canSetSessionPreset(.photo) {
             captureSession.sessionPreset = .photo
+            print("✅ セッションプリセットを .photo に設定")
+        } else {
+            print("⚠️ .photo プリセットが利用不可")
         }
 
         // Get the best camera device (48MP capable)
         guard let device = getBestCameraDevice() else {
-            errorMessage = "48MP対応カメラが見つかりません"
+            let message = "カメラデバイスが見つかりません。実機で実行していますか？"
+            print("❌ \(message)")
+            DispatchQueue.main.async {
+                self.errorMessage = message
+            }
             captureSession.commitConfiguration()
             return
         }
 
+        print("✅ カメラデバイスを選択: \(device.localizedName)")
         currentDevice = device
 
         do {
             let input = try AVCaptureDeviceInput(device: device)
+            print("✅ AVCaptureDeviceInput作成成功")
 
             if captureSession.canAddInput(input) {
                 captureSession.addInput(input)
+                print("✅ 入力デバイスを追加")
+            } else {
+                print("❌ 入力デバイスを追加できません")
             }
 
             if captureSession.canAddOutput(photoOutput) {
                 captureSession.addOutput(photoOutput)
+                print("✅ 写真出力を追加")
 
                 // Enable Apple ProRAW if available
                 if photoOutput.isAppleProRAWSupported {
                     photoOutput.isAppleProRAWEnabled = true
+                    print("✅ Apple ProRAW有効化")
+                } else {
+                    print("⚠️ Apple ProRAW非対応")
                 }
 
                 // Configure for maximum quality
-                if let photoSettings = photoOutput.availablePhotoCodecTypes.first {
-                    photoOutput.maxPhotoQualityPrioritization = .quality
-                }
+                photoOutput.maxPhotoQualityPrioritization = .quality
+                print("✅ 最高品質設定完了")
+            } else {
+                print("❌ 写真出力を追加できません")
             }
 
             captureSession.commitConfiguration()
+            print("✅ セッション設定完了")
 
             // Start session on background thread
             DispatchQueue.global(qos: .userInitiated).async { [weak self] in
                 guard let self = self else { return }
+                print("⏳ カメラセッション起動中...")
                 self.captureSession.startRunning()
+                print("✅ カメラセッション起動完了")
 
                 // Wait a bit for session to stabilize, then mark as ready
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     self.isSessionReady = true
-                    print("カメラセッション準備完了")
+                    print("🎉 カメラ準備完了！撮影可能です")
                 }
             }
 
         } catch {
-            errorMessage = "カメラの設定に失敗しました: \(error.localizedDescription)"
+            let message = "カメラの設定に失敗: \(error.localizedDescription)"
+            print("❌ \(message)")
+            DispatchQueue.main.async {
+                self.errorMessage = message
+            }
             captureSession.commitConfiguration()
         }
     }
 
     private func getBestCameraDevice() -> AVCaptureDevice? {
-        // Try different camera types in order of preference
+        print("=== カメラデバイスの検索を開始 ===")
+
+        // List all available devices for debugging
+        let allDevices = AVCaptureDevice.DiscoverySession(
+            deviceTypes: [
+                .builtInTripleCamera,
+                .builtInDualWideCamera,
+                .builtInDualCamera,
+                .builtInWideAngleCamera,
+                .builtInUltraWideCamera,
+                .builtInTelephotoCamera
+            ],
+            mediaType: .video,
+            position: .unspecified
+        ).devices
+
+        print("利用可能なカメラデバイス数: \(allDevices.count)")
+        for device in allDevices {
+            print("- \(device.localizedName) (\(device.deviceType.rawValue)) - Position: \(device.position.rawValue)")
+        }
+
+        // Try to get back camera with specific device types
         let deviceTypes: [AVCaptureDevice.DeviceType] = [
             .builtInTripleCamera,
             .builtInDualWideCamera,
@@ -115,29 +179,46 @@ class CameraManager: NSObject, ObservableObject {
             .builtInWideAngleCamera
         ]
 
-        // Try each device type
         for deviceType in deviceTypes {
             if let device = AVCaptureDevice.default(deviceType, for: .video, position: .back) {
-                print("カメラデバイスを検出: \(deviceType.rawValue)")
+                print("✅ カメラデバイスを検出: \(device.localizedName) (\(deviceType.rawValue))")
                 return device
+            } else {
+                print("❌ \(deviceType.rawValue) は利用不可")
             }
         }
 
-        // Fallback: Use discovery session
-        let discoverySession = AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera],
-            mediaType: .video,
-            position: .back
-        )
-
-        if let device = discoverySession.devices.first {
-            print("ディスカバリーセッションでカメラを検出")
+        // Fallback 1: Try to get any back camera
+        print("フォールバック1: 任意のバックカメラを検索")
+        if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
+            print("✅ バックカメラを検出: \(device.localizedName)")
             return device
         }
 
-        // Last resort: any video device
-        print("エラー: カメラデバイスが見つかりません")
-        return AVCaptureDevice.default(for: .video)
+        // Fallback 2: Use discovery session for back cameras
+        print("フォールバック2: ディスカバリーセッションで検索")
+        let backCameras = allDevices.filter { $0.position == .back }
+        if let device = backCameras.first {
+            print("✅ ディスカバリーセッションでカメラを検出: \(device.localizedName)")
+            return device
+        }
+
+        // Fallback 3: Use ANY camera (including front)
+        print("フォールバック3: フロントカメラも含めて検索")
+        if let device = allDevices.first {
+            print("⚠️ フロントカメラを使用: \(device.localizedName)")
+            return device
+        }
+
+        // Last resort: default video device
+        print("フォールバック4: デフォルトビデオデバイス")
+        if let device = AVCaptureDevice.default(for: .video) {
+            print("✅ デフォルトビデオデバイスを検出: \(device.localizedName)")
+            return device
+        }
+
+        print("❌❌❌ エラー: カメラデバイスが見つかりません ❌❌❌")
+        return nil
     }
 
     func capturePhoto() {
