@@ -4,6 +4,8 @@
 <dict>
     <key>NSCameraUsageDescription</key>
     <string>48MP RAW写真を撮影するためにカメラへのアクセスが必要です</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>撮影した写真に位置情報を埋め込むために使用します</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>撮影した写真を保存するためにフォトライブラリへのアクセスが必要です</string>
     <key>NSPhotoLibraryUsageDescription</key>
